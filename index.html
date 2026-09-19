@@ -1,0 +1,501 @@
+만<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>고민만버젯 - 스마트폰 맞춤 지출 매니저</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Pretendard/Noto Sans KR) -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            /* 모바일 브라우저 바운스 방지 및 깔끔한 스크롤 */
+            overscroll-behavior-y: none;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        .touch-feedback:active {
+            transform: scale(0.97);
+        }
+        /* Hide scrollbar for clean tabs */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="selection:bg-indigo-500 selection:text-white min-h-screen flex flex-col">
+
+    <!-- 스마트폰 브라우저 최적화 컨테이너 (모바일 풀너비, 데스크탑 중앙 정렬 최대너비 제한) -->
+    <div class="w-full max-w-md mx-auto min-h-screen bg-slate-50 flex flex-col shadow-2xl relative">
+        
+        <!-- App Header (Mobile Native Style) -->
+        <header class="bg-white/90 backdrop-blur-md sticky top-0 border-b border-slate-100 px-4 py-3.5 flex justify-between items-center z-30">
+            <div class="flex items-center space-x-2.5">
+                <div class="w-9 h-9 bg-gradient-to-tr from-indigo-600 to-violet-500 text-white rounded-xl shadow-md shadow-indigo-200 flex items-center justify-center font-bold text-sm">
+                    <i class="fa-solid fa-wallet"></i>
+                </div>
+                <div>
+                    <h1 class="text-sm font-bold text-slate-900 tracking-tight">위시버젯</h1>
+                    <p class="text-[10px] text-slate-400 font-medium">모바일 맞춤 지출 매니저</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button onclick="openAddModal()" class="w-9 h-9 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-md shadow-indigo-200 flex items-center justify-center text-sm transition-all touch-feedback" title="항목 추가">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Scrollable Content Area -->
+        <main class="flex-grow pb-28 px-4 pt-4 space-y-4">
+            
+            <!-- Dashboard Widget (Mobile Optimized) -->
+            <div class="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-5 shadow-xl relative overflow-hidden">
+                <!-- Glowing Orb -->
+                <div class="absolute -right-12 -top-12 w-36 h-36 bg-indigo-500/20 rounded-full blur-2xl pointer-events-none"></div>
+
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <p class="text-[11px] font-medium text-indigo-300">현재 필요한 실질 지출액</p>
+                        <h2 id="totalPendingAmount" class="text-3xl font-extrabold text-amber-400 tracking-tight mt-0.5">0원</h2>
+                    </div>
+                    <span id="pendingCountBadge" class="bg-amber-500/20 text-amber-300 text-[10px] px-2.5 py-1 rounded-full font-bold border border-amber-500/30">
+                        예정 0개
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 pt-3 border-t border-indigo-800/50 text-xs">
+                    <div>
+                        <p class="text-indigo-300/80 text-[10px]">실제 결제완료 지출</p>
+                        <p id="totalCompletedAmount" class="font-bold text-emerald-400 text-sm mt-0.5">0원</p>
+                    </div>
+                    <div>
+                        <p class="text-indigo-300/80 text-[10px]">기간만료 제외금액</p>
+                        <p id="totalExpiredAmount" class="font-bold text-slate-400 text-sm mt-0.5">0원</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Segment Control -->
+            <div class="bg-slate-200/70 p-1 rounded-2xl flex text-xs font-semibold text-slate-600">
+                <button onclick="setFilter('all')" id="tabAll" class="flex-1 py-2.5 rounded-xl transition-all bg-white text-indigo-600 shadow-sm">전체</button>
+                <button onclick="setFilter('pending')" id="tabPending" class="flex-1 py-2.5 rounded-xl transition-all">고민중</button>
+                <button onclick="setFilter('completed')" id="tabCompleted" class="flex-1 py-2.5 rounded-xl transition-all">완료</button>
+                <button onclick="setFilter('expired')" id="tabExpired" class="flex-1 py-2.5 rounded-xl transition-all">만료</button>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                    <i class="fa-solid fa-search text-xs"></i>
+                </span>
+                <input type="text" id="searchInput" oninput="renderItems()" placeholder="상품명 또는 메모 검색..." 
+                    class="w-full pl-10 pr-4 py-3 bg-white rounded-2xl border border-slate-200 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all shadow-sm">
+            </div>
+
+            <!-- Items List Container -->
+            <div id="itemsListContainer" class="space-y-2.5">
+                <!-- Dynamically populated items -->
+            </div>
+
+        </main>
+
+        <!-- Mobile Floating Bottom Action Bar -->
+        <div class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur-md border-t border-slate-100 p-3.5 px-5 flex justify-between items-center z-30 shadow-lg">
+            <div class="flex items-center space-x-2 text-xs text-slate-500">
+                <i class="fa-solid fa-circle-info text-indigo-500"></i>
+                <span id="footerSummaryText">유효 목표: 0원</span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button onclick="resetData()" class="px-3 py-2 text-xs font-medium text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all touch-feedback">
+                    <i class="fa-solid fa-rotate-right mr-1"></i> 초기화
+                </button>
+                <button onclick="openAddModal()" class="px-4 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md shadow-indigo-200 transition-all touch-feedback flex items-center space-x-1.5">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>항목 추가</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Add Item Modal (Mobile Optimized Sheet Style) -->
+        <div id="addModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end justify-center p-0 opacity-0 pointer-events-none transition-opacity duration-300">
+            <div id="modalContent" class="bg-white w-full max-w-md rounded-t-3xl p-6 shadow-2xl transform translate-y-full transition-transform duration-300 max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-5">
+                    <h3 class="text-base font-bold text-slate-900 flex items-center space-x-2">
+                        <i class="fa-solid fa-circle-plus text-indigo-600"></i>
+                        <span>새로운 위시리스트 추가</span>
+                    </h3>
+                    <button onclick="closeAddModal()" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 touch-feedback">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <form id="itemForm" onsubmit="addItem(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">물건 또는 서비스 이름</label>
+                        <input type="text" id="itemName" required placeholder="예: 갤럭시 S25 울트라, 정기 구독권" 
+                            class="w-full px-4 py-3.5 rounded-2xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all text-sm">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">예상 금액 (원)</label>
+                            <input type="text" id="itemPrice" required placeholder="예: 1,690,000" oninput="formatPriceInput(this)"
+                                class="w-full px-4 py-3.5 rounded-2xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all text-sm font-bold text-slate-800">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">카테고리</label>
+                            <select id="itemCategory" class="w-full px-3 py-3.5 rounded-2xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all text-sm bg-white">
+                                <option value="전자기기">전자기기</option>
+                                <option value="생활/가구">생활/가구</option>
+                                <option value="패션/뷰티">패션/뷰티</option>
+                                <option value="문화/서비스">문화/서비스</option>
+                                <option value="기타">기타</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">고민 중인 기간 (만료 기간)</label>
+                        <!-- Alarm-style Scroll / Stepper Picker (1 to 365 days) -->
+                        <div class="flex items-center space-x-2 bg-slate-50 border border-slate-200 rounded-2xl p-2">
+                            <button type="button" onclick="adjustPeriod(-1)" class="w-10 h-10 bg-white hover:bg-slate-100 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 font-bold transition-all touch-feedback shadow-sm">
+                                <i class="fa-solid fa-minus text-xs"></i>
+                            </button>
+                            <div class="flex-grow flex items-center justify-center space-x-1.5 bg-white py-2 px-3 rounded-xl border border-slate-200 shadow-sm">
+                                <input type="number" id="itemPeriodInput" min="1" max="365" value="30" oninput="validatePeriodInput(this)"
+                                    class="w-16 text-center text-base font-extrabold text-indigo-600 outline-none bg-transparent">
+                                <span class="text-xs font-bold text-slate-500">일 (Day)</span>
+                            </div>
+                            <button type="button" onclick="adjustPeriod(1)" class="w-10 h-10 bg-white hover:bg-slate-100 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 font-bold transition-all touch-feedback shadow-sm">
+                                <i class="fa-solid fa-plus text-xs"></i>
+                            </button>
+                        </div>
+                        <div class="flex justify-between items-center mt-1.5 px-1">
+                            <p class="text-[10px] text-slate-400">※ 1일 ~ 365일 (1년)까지 설정 가능합니다.</p>
+                            <div class="flex space-x-1">
+                                <button type="button" onclick="setQuickPeriod(7)" class="text-[10px] bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 px-2 py-0.5 rounded-md font-medium transition-colors">7일</button>
+                                <button type="button" onclick="setQuickPeriod(30)" class="text-[10px] bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 px-2 py-0.5 rounded-md font-medium transition-colors">30일</button>
+                                <button type="button" onclick="setQuickPeriod(90)" class="text-[10px] bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 px-2 py-0.5 rounded-md font-medium transition-colors">90일</button>
+                                <button type="button" onclick="setQuickPeriod(365)" class="text-[10px] bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 px-2 py-0.5 rounded-md font-medium transition-colors">365일</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">메모 (선택사항)</label>
+                        <input type="text" id="itemMemo" placeholder="예: 사전예약 혜택 활용 예정" 
+                            class="w-full px-4 py-3.5 rounded-2xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all text-sm">
+                    </div>
+
+                    <div class="pt-2">
+                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl text-sm shadow-lg shadow-indigo-200 transition-all touch-feedback flex items-center justify-center space-x-2">
+                            <i class="fa-solid fa-check"></i>
+                            <span>위시리스트 등록하기</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Current active filter state
+        let currentFilter = 'all';
+
+        // Initialize state from localStorage or default list
+        let items = JSON.parse(localStorage.getItem('wish_items_mobile')) || [
+            { id: 1, name: '갤럭시 S25 울트라', price: 1698000, category: '전자기기', memo: '사전예약 구매 예정', completed: false, createdAt: Date.now() - 1000 * 60 * 60 * 24 * 5, periodDays: 30 },
+            { id: 2, name: '무선 노이즈캔슬링 이어폰', price: 299000, category: '전자기기', memo: '출퇴근용', completed: true, createdAt: Date.now() - 1000 * 60 * 60 * 24 * 2, periodDays: 14 },
+            { id: 3, name: '프리미엄 인체공학 데스크', price: 480000, category: '생활/가구', memo: '허리 통증 방지', completed: false, createdAt: Date.now() - 1000 * 60 * 60 * 24 * 45, periodDays: 30 } // Expired example
+        ];
+
+        function formatNumber(num) {
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+
+        function formatPriceInput(input) {
+            let value = input.value.replace(/[^0-9]/g, '');
+            if (value) {
+                input.value = formatNumber(parseInt(value, 10));
+            } else {
+                input.value = '';
+            }
+        }
+
+        function adjustPeriod(amount) {
+            const input = document.getElementById('itemPeriodInput');
+            let current = parseInt(input.value, 10) || 1;
+            let newVal = current + amount;
+            if (newVal < 1) newVal = 1;
+            if (newVal > 365) newVal = 365;
+            input.value = newVal;
+        }
+
+        function setQuickPeriod(days) {
+            const input = document.getElementById('itemPeriodInput');
+            input.value = days;
+        }
+
+        function validatePeriodInput(input) {
+            let val = parseInt(input.value, 10);
+            if (isNaN(val)) return;
+            if (val < 1) input.value = 1;
+            if (val > 365) input.value = 365;
+        }
+
+        function saveItems() {
+            localStorage.setItem('wish_items_mobile', JSON.stringify(items));
+        }
+
+        function isItemExpired(item) {
+            if (item.completed) return false;
+            const now = Date.now();
+            const elapsedDays = (now - item.createdAt) / (1000 * 60 * 60 * 24);
+            return elapsedDays >= item.periodDays;
+        }
+
+        function getRemainingDays(item) {
+            const now = Date.now();
+            const elapsedDays = (now - item.createdAt) / (1000 * 60 * 60 * 24);
+            const remaining = Math.ceil(item.periodDays - elapsedDays);
+            return remaining > 0 ? remaining : 0;
+        }
+
+        // Modal Controls
+        function openAddModal() {
+            const modal = document.getElementById('addModal');
+            const content = document.getElementById('modalContent');
+            modal.classList.remove('pointer-events-none', 'opacity-0');
+            modal.classList.add('opacity-100');
+            content.classList.remove('translate-y-full');
+            document.getElementById('itemName').focus();
+        }
+
+        function closeAddModal() {
+            const modal = document.getElementById('addModal');
+            const content = document.getElementById('modalContent');
+            content.classList.add('translate-y-full');
+            modal.classList.remove('opacity-100');
+            modal.classList.add('opacity-0');
+            setTimeout(() => {
+                modal.classList.add('pointer-events-none');
+            }, 300);
+        }
+
+        function setFilter(filter) {
+            currentFilter = filter;
+            ['all', 'pending', 'completed', 'expired'].forEach(f => {
+                const btn = document.getElementById(`tab${f.charAt(0).toUpperCase() + f.slice(1)}`);
+                if (f === filter) {
+                    btn.className = "flex-1 py-2.5 rounded-xl transition-all bg-white text-indigo-600 shadow-sm font-bold";
+                } else {
+                    btn.className = "flex-1 py-2.5 rounded-xl transition-all text-slate-500 font-medium";
+                }
+            });
+            renderItems();
+        }
+
+        function addItem(e) {
+            e.preventDefault();
+            const nameInput = document.getElementById('itemName');
+            const priceInput = document.getElementById('itemPrice');
+            const categorySelect = document.getElementById('itemCategory');
+            const periodInput = document.getElementById('itemPeriodInput');
+            const memoInput = document.getElementById('itemMemo');
+
+            const rawPrice = parseInt(priceInput.value.replace(/[^0-9]/g, ''), 10);
+            let periodDays = parseInt(periodInput.value, 10);
+            if (isNaN(periodDays) || periodDays < 1) periodDays = 1;
+            if (periodDays > 365) periodDays = 365;
+
+            if (!nameInput.value.trim() || isNaN(rawPrice)) return;
+
+            const newItem = {
+                id: Date.now(),
+                name: nameInput.value.trim(),
+                price: rawPrice,
+                category: categorySelect.value,
+                periodDays: periodDays,
+                memo: memoInput.value.trim(),
+                completed: false,
+                createdAt: Date.now()
+            };
+
+            items.unshift(newItem);
+            saveItems();
+            renderItems();
+            updateDashboard();
+            closeAddModal();
+
+            // Reset form
+            nameInput.value = '';
+            priceInput.value = '';
+            periodInput.value = '30';
+            memoInput.value = '';
+        }
+
+        function toggleItem(id) {
+            items = items.map(item => {
+                if (item.id === id) {
+                    if (!item.completed && isItemExpired(item)) return item;
+                    return { ...item, completed: !item.completed };
+                }
+                return item;
+            });
+            saveItems();
+            renderItems();
+            updateDashboard();
+        }
+
+        function deleteItem(id) {
+            items = items.filter(item => item.id !== id);
+            saveItems();
+            renderItems();
+            updateDashboard();
+        }
+
+        function resetData() {
+            if (confirm('모든 위시리스트 항목을 초기화하시겠습니까?')) {
+                items = [];
+                saveItems();
+                renderItems();
+                updateDashboard();
+            }
+        }
+
+        function renderItems() {
+            const container = document.getElementById('itemsListContainer');
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+
+            let filtered = items.filter(item => {
+                const expired = isItemExpired(item);
+                const matchesSearch = item.name.toLowerCase().includes(searchQuery) || item.memo.toLowerCase().includes(searchQuery);
+
+                if (currentFilter === 'pending') return matchesSearch && !item.completed && !expired;
+                if (currentFilter === 'completed') return matchesSearch && item.completed;
+                if (currentFilter === 'expired') return matchesSearch && !item.completed && expired;
+                return matchesSearch;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-16 text-slate-400 bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
+                        <i class="fa-solid fa-box-open text-3xl mb-2 text-slate-300"></i>
+                        <p class="text-xs font-medium">등록된 항목이 없거나 검색 결과가 없습니다.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            filtered.forEach(item => {
+                const expired = isItemExpired(item);
+                const remaining = getRemainingDays(item);
+
+                const categoryColors = {
+                    '전자기기': 'bg-blue-50 text-blue-600 border-blue-100',
+                    '생활/가구': 'bg-amber-50 text-amber-600 border-amber-100',
+                    '패션/뷰티': 'bg-rose-50 text-rose-600 border-rose-100',
+                    '문화/서비스': 'bg-purple-50 text-purple-600 border-purple-100',
+                    '기타': 'bg-slate-100 text-slate-600 border-slate-200'
+                };
+                const badgeColor = categoryColors[item.category] || categoryColors['기타'];
+
+                let statusBadge = '';
+                if (item.completed) {
+                    statusBadge = `<span class="text-[9px] px-2 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-200 font-semibold">결제완료</span>`;
+                } else if (expired) {
+                    statusBadge = `<span class="text-[9px] px-2 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200 font-semibold">기간만료</span>`;
+                } else {
+                    statusBadge = `<span class="text-[9px] px-2 py-0.5 rounded bg-amber-50 text-amber-600 border border-amber-200 font-semibold">D-${remaining}</span>`;
+                }
+
+                html += `
+                    <div class="flex items-center justify-between p-4 rounded-2xl border transition-all bg-white ${item.completed || expired ? 'border-slate-100 opacity-70 bg-slate-50/50' : 'border-slate-100 shadow-sm hover:border-indigo-100'}">
+                        <div class="flex items-center space-x-3.5 min-w-0 flex-grow mr-3">
+                            <input type="checkbox" ${item.completed ? 'checked' : ''} ${expired ? 'disabled' : ''} onclick="toggleItem(${item.id})"
+                                class="w-5 h-5 accent-indigo-600 rounded cursor-pointer shrink-0 ${expired ? 'cursor-not-allowed opacity-40' : ''}">
+                            <div class="min-w-0">
+                                <div class="flex items-center space-x-1.5 flex-wrap gap-y-0.5">
+                                    <span class="font-bold text-xs truncate ${item.completed || expired ? 'line-through text-slate-400' : 'text-slate-800'}">${escapeHtml(item.name)}</span>
+                                    <span class="text-[9px] px-1.5 py-0.5 rounded border font-medium ${badgeColor}">${item.category}</span>
+                                    ${statusBadge}
+                                </div>
+                                ${item.memo ? `<p class="text-[11px] text-slate-400 mt-1 truncate">${escapeHtml(item.memo)}</p>` : ''}
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3 shrink-0">
+                            <span class="font-extrabold text-xs ${item.completed || expired ? 'text-slate-400 line-through' : 'text-slate-900'}">${formatNumber(item.price)}원</span>
+                            <button onclick="deleteItem(${item.id})" class="text-slate-300 hover:text-rose-500 transition-colors p-1.5" title="삭제">
+                                <i class="fa-solid fa-trash-can text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function updateDashboard() {
+            let totalPending = 0;
+            let totalCompleted = 0;
+            let totalExpired = 0;
+            let pendingCount = 0;
+
+            items.forEach(item => {
+                const expired = isItemExpired(item);
+                if (item.completed) {
+                    totalCompleted += item.price;
+                } else if (expired) {
+                    totalExpired += item.price;
+                } else {
+                    totalPending += item.price;
+                    pendingCount++;
+                }
+            });
+
+            document.getElementById('totalPendingAmount').innerText = formatNumber(totalPending) + '원';
+            document.getElementById('totalCompletedAmount').innerText = formatNumber(totalCompleted) + '원';
+            document.getElementById('totalExpiredAmount').innerText = formatNumber(totalExpired) + '원';
+            document.getElementById('pendingCountBadge').innerText = `예정 ${pendingCount}개`;
+            document.getElementById('footerSummaryText').innerText = `필요 지출: ${formatNumber(totalPending)}원`;
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+
+        window.onload = function() {
+            renderItems();
+            updateDashboard();
+        };
+    </script>
+</body>
+</html>
+```
+eof
